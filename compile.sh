@@ -1,9 +1,11 @@
 #!/bin/bash
 
-rm -rf build
-mkdir build
+#rm -rf build
+#mkdir build
+rm imgui.ini
 cd build
 cmake ..
-make
-cp ./bin/imgui ../
+bear -- make
+cp bin/core ../bin/
 cd ..
+./bin/core &

@@ -27,6 +27,11 @@
 #include <sys/utsname.h>
 #endif
 
+typedef struct _SwapChainBuffers {
+	VkImage image{ VK_NULL_HANDLE };
+	VkImageView view{ VK_NULL_HANDLE };
+} SwapChainBuffer;
+
 class VulkanSwapChain
 {
 private: 
@@ -38,8 +43,9 @@ public:
 	VkFormat colorFormat{};
 	VkColorSpaceKHR colorSpace{};
 	VkSwapchainKHR swapChain{ VK_NULL_HANDLE };
+	uint32_t imageCount;
 	std::vector<VkImage> images{};
-	std::vector<VkImageView> imageViews{};
+	std::vector<SwapChainBuffer> buffers{};
 	uint32_t queueNodeIndex{ UINT32_MAX };
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -73,7 +79,7 @@ public:
 	* @param height Pointer to the height of the swapchain (may be adjusted to fit the requirements of the swapchain)
 	* @param vsync (Optional, default = false) Can be used to force vsync-ed rendering (by using VK_PRESENT_MODE_FIFO_KHR as presentation mode)
 	*/
-	void create(uint32_t& width, uint32_t& height, bool vsync = false, bool fullscreen = false);
+	void create(uint32_t* width, uint32_t* height, bool vsync = false, bool fullscreen = false);
 	/**
 	* Acquires the next image in the swap chain
 	* 
@@ -84,7 +90,7 @@ public:
 	* 
 	* @return VkResult of the image acquisition
 	*/
-	VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t& imageIndex);
+	VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex);
 	/**
 	* Queue an image for presentation
 	*
