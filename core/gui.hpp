@@ -11,6 +11,7 @@
 #include <implot3d.h>
 #include <unordered_map>
 #include <vector>
+#include "test.hpp"
 
 // Options and values to display/toggle from the UI
 struct UISettings {
@@ -727,6 +728,7 @@ public:
     // better signal function (maybe something like noisy imu data)
     // heat data? like overlayed the battery ??
     // place freq floating window here
+    test_func();
     TimeSeriesPlot();
     MagnitudePlot();
     PhasePlot();
