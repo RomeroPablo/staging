@@ -590,7 +590,7 @@ public:
 
     ImGui::Begin(windowName.c_str());
     ImGui::Text(("Window Name: " + windowName).c_str());
-    if (ImPlot::BeginPlot("This is the water")) {
+    if (ImPlot::BeginPlot("Sync")) {
       ImPlot::SetupAxes("x", "y");
       ImPlot::PlotLine("f(x)", xs1, ys1, 1001);
       ImPlot::EndPlot();
@@ -611,12 +611,12 @@ public:
     // Create a floating window and bring it to the front
     ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.95f);
-    ImGui::Begin("And this is the well", nullptr,
+    ImGui::Begin("Power Generation", nullptr,
                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
     ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
     // Display the table with animated data
     if (ImGui::BeginTable("##table", 3, flags, ImVec2(-1, 0))) {
-      ImGui::TableSetupColumn("Electrode", ImGuiTableColumnFlags_WidthFixed,
+      ImGui::TableSetupColumn("Cell", ImGuiTableColumnFlags_WidthFixed,
                               75.0f);
       ImGui::TableSetupColumn("Voltage", ImGuiTableColumnFlags_WidthFixed,
                               75.0f);
@@ -637,7 +637,7 @@ public:
         ImGui::Text("%.3f V", data[offset]);
 
         ImGui::TableSetColumnIndex(2);
-        ImGui::Text("Signal %d", offset);
+        ImGui::Text("Signal λ %d", offset);
       }
 
       ImPlot::PopColormap();
@@ -672,12 +672,12 @@ public:
     // Create a floating window
     ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.95f); // Slight transparency
-    ImGui::Begin("Drink full and descend", nullptr,
+    ImGui::Begin("Distribution", nullptr,
                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
     ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
     // Begin the plot
     ImPlot3D::PushColormap("Jet");
-    if (ImPlot3D::BeginPlot("The horse is the white of the eyes",
+    if (ImPlot3D::BeginPlot("Ts4 Q3",
                             ImVec2(-1, -1), ImPlot3DFlags_NoClip)) {
       ImPlot3D::SetupAxesLimits(-1, 1, -1, 1, -1.5, 1.5);
       ImPlot3D::PushStyleVar(ImPlot3DStyleVar_FillAlpha, 0.8f);
@@ -721,8 +721,281 @@ public:
     SurfacePlot();
     AnimatedTablePlot();
 
+    // TODO:
+    // what do I want for the poster?
+    // lin pot histogram
+    // better signal function (maybe something like noisy imu data)
+    // heat data? like overlayed the battery ??
+    // place freq floating window here
+    TimeSeriesPlot();
+    MagnitudePlot();
+    PhasePlot();
+    PowerPlot();
+    SpherePointCloud();
+    HeatmapPlot();
+   // BlackHolePointCloud();
+
     ImGui::Render();
   }
+
+void HeatmapPlot() {
+    static float values1[7][7] = {
+        {0.8f, 2.4f, 2.5f, 3.9f, 0.0f, 4.0f, 0.0f},
+        {2.4f, 0.0f, 4.0f, 1.0f, 2.7f, 0.0f, 0.0f},
+        {1.1f, 2.4f, 0.8f, 4.3f, 1.9f, 4.4f, 0.0f},
+        {0.6f, 0.0f, 0.3f, 0.0f, 3.1f, 0.0f, 0.0f},
+        {0.7f, 1.7f, 0.6f, 2.6f, 2.2f, 6.2f, 0.0f},
+        {1.3f, 1.2f, 0.0f, 0.0f, 0.0f, 3.2f, 5.1f},
+        {0.1f, 2.0f, 0.0f, 1.4f, 0.0f, 1.9f, 6.3f}
+    };
+    static float scale_min = 0.0f;
+    static float scale_max = 6.3f;
+    static const char* xlabels[] = {"C1", "C2", "C3", "C4", "C5", "C6", "C7"};
+    static const char* ylabels[] = {"R1", "R2", "R3", "R4", "R5", "R6", "R7"};
+
+    static const int size = 80;
+    static double values2[size * size];
+
+    // Regenerate visual noise pattern every frame
+    srand((unsigned int)(ImGui::GetTime() * 1000000));
+    for (int i = 0; i < size * size; ++i)
+        values2[i] = (double)rand() / RAND_MAX;
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Heatmaps", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    ImPlot::PushColormap(ImPlotColormap_Cool);
+
+    // 7x7 labeled matrix heatmap
+    if (ImPlot::BeginPlot("##Heatmap1", ImVec2(225, 225), ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText)) {
+        ImPlot::SetupAxes(nullptr, nullptr,
+            ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoTickMarks,
+            ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoTickMarks);
+        ImPlot::SetupAxisTicks(ImAxis_X1, 0 + 1.0 / 14.0, 1 - 1.0 / 14.0, 7, xlabels);
+        ImPlot::SetupAxisTicks(ImAxis_Y1, 1 - 1.0 / 14.0, 0 + 1.0 / 14.0, 7, ylabels);
+        ImPlot::PlotHeatmap("heat", values1[0], 7, 7, scale_min, scale_max, "%g", ImPlotPoint(0, 0), ImPlotPoint(1, 1));
+        ImPlot::EndPlot();
+    }
+
+    ImGui::SameLine();
+
+    // Pure visual noise heatmap with two overlaid layers
+    if (ImPlot::BeginPlot("##Heatmap2", ImVec2(225, 225))) {
+        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);
+        ImPlot::SetupAxesLimits(-1, 1, -1, 1);
+        ImPlot::PlotHeatmap("heat1", values2, size, size, 0, 1, nullptr);
+        ImPlot::PlotHeatmap("heat2", values2, size, size, 0, 1, nullptr, ImPlotPoint(-1, -1), ImPlotPoint(0, 0));
+        ImPlot::EndPlot();
+    }
+
+    ImPlot::PopColormap();
+    ImGui::End();
+}
+
+  void BlackHolePointCloud() {
+    constexpr int SPHERE_POINTS = 500; // Dense center
+    constexpr int RING_POINTS = 500;   // Accretion disk
+    constexpr int N = SPHERE_POINTS + RING_POINTS;
+    static float xs[N], ys[N], zs[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    // Generate the central sphere (Event Horizon)
+    for (int i = 0; i < SPHERE_POINTS; ++i) {
+        float u = (float)rand() / RAND_MAX;
+        float v = (float)rand() / RAND_MAX;
+        
+        float theta = 2.0f * IM_PI * u;  
+        float phi = acosf(2.0f * v - 1.0f);
+
+        float r = 0.3f + 0.02f * sinf(5.0f * t + theta); // Small pulsation effect
+        xs[i] = r * sinf(phi) * cosf(theta);
+        ys[i] = r * sinf(phi) * sinf(theta);
+        zs[i] = r * cosf(phi);
+    }
+
+    // Generate the rotating rings (Accretion Disk)
+    for (int i = 0; i < RING_POINTS; ++i) {
+        float angle = 2.0f * IM_PI * (i % 100) / 100.0f + 0.5f * t; // Rotation effect
+        float radius = 0.5f + 0.2f * ((i / 100) % 10) / 10.0f;      // Multi-layered rings
+
+        // Warping effect to simulate gravitational distortion
+        float distortion = 0.05f * sinf(3.0f * angle + t);
+        xs[SPHERE_POINTS + i] = (radius + distortion) * cosf(angle);
+        ys[SPHERE_POINTS + i] = (radius + distortion) * sinf(angle);
+        zs[SPHERE_POINTS + i] = 0.05f * cosf(2.0f * t + angle); // Slight oscillation
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Black Hole Point Cloud", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot3D::BeginPlot("Black Hole", ImVec2(-1, -1), ImPlot3DFlags_NoClip)) {
+        ImPlot3D::SetupAxesLimits(-1.2, 1.2, -1.2, 1.2, -1.2, 1.2);
+
+        // Reduce point size for a smooth look
+        ImPlot3D::PushStyleVar(ImPlot3DStyleVar_MarkerSize, 1.5f);
+
+        ImPlot3D::PlotScatter("Event Horizon", xs, ys, zs, SPHERE_POINTS);
+        ImPlot3D::PlotScatter("Accretion Disk", &xs[SPHERE_POINTS], &ys[SPHERE_POINTS], &zs[SPHERE_POINTS], RING_POINTS);
+
+        ImPlot3D::PopStyleVar();
+        ImPlot3D::EndPlot();
+    }
+
+    ImGui::End();
+}
+
+
+  void SpherePointCloud() {
+    constexpr int N = 1000; // Increase number of points for a denser cloud
+    static float xs[N], ys[N], zs[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    // Use a randomized distribution for a more natural point spread
+    for (int i = 0; i < N; ++i) {
+        float u = (float)rand() / RAND_MAX; // Randomized spherical distribution
+        float v = (float)rand() / RAND_MAX;
+        
+        float theta = 2.0f * IM_PI * u;  // Random longitude
+        float phi = acosf(2.0f * v - 1.0f); // Random latitude (avoiding clustering at poles)
+
+        float r = 1.0f + 0.05f * sinf(3.0f * t + theta); // Subtle pulsation effect
+        xs[i] = r * sinf(phi) * cosf(theta);
+        ys[i] = r * sinf(phi) * sinf(theta);
+        zs[i] = r * cosf(phi);
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Point Distribution", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot3D::BeginPlot("x3 14t", ImVec2(-1, -1), ImPlot3DFlags_NoClip)) {
+        ImPlot3D::SetupAxesLimits(-1.2, 1.2, -1.2, 1.2, -1.2, 1.2);
+        ImPlot3D::PushStyleVar(ImPlot3DStyleVar_MarkerSize, 0.8f);
+        ImPlot3D::PlotScatter("Points", xs, ys, zs, N);
+        ImPlot3D::EndPlot();
+    }
+
+    ImGui::End();
+}
+
+
+  void PowerPlot() {
+    constexpr int N = 500;
+    static float freq[N], power[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    for (int i = 0; i < N; ++i) {
+        freq[i] = i + 1;
+        power[i] = -50.0f + 20.0f * expf(-0.005f * freq[i]) + 5.0f * sinf(0.05f * freq[i] + 0.3f * t);
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Power Spectrum", nullptr);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot::BeginPlot("Power", ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Frequency [Hz]", "Power [dB]");
+        ImPlot::SetupAxesLimits(1, 500, -100, 0, ImPlotCond_Always);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+        ImPlot::PlotLine("Power Density", freq, power, N);
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
+}
+
+
+  void PhasePlot() {
+    constexpr int N = 500;
+    static float freq[N], phase[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    for (int i = 0; i < N; ++i) {
+        freq[i] = i + 1;
+        phase[i] = 180.0f * sinf(0.01f * freq[i] - 0.2f * t);
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Phase Spectrum", nullptr);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot::BeginPlot("Phase", ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Frequency [Hz]", "Phase Angle [deg]");
+        ImPlot::SetupAxesLimits(1, 500, -180, 180, ImPlotCond_Always);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+        ImPlot::PlotLine("Phase Shift", freq, phase, N);
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
+}
+
+
+  void MagnitudePlot() {
+    constexpr int N = 500;
+    static float freq[N], magnitude[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    for (int i = 0; i < N; ++i) {
+        freq[i] = i + 1;
+        magnitude[i] = 10.0f / (1.0f + 0.02f * freq[i] * freq[i]) + 0.2f * sinf(0.1f * freq[i] + t);
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Magnitude Spectrum", nullptr);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot::BeginPlot("Magnitude", ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Frequency [Hz]", "Magnitude [dB]");
+        ImPlot::SetupAxesLimits(1, 500, -5, 12, ImPlotCond_Always);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+        ImPlot::PlotLine("Magnitude", freq, magnitude, N);
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
+}
+
+
+  void TimeSeriesPlot() {
+    constexpr int N = 1000;
+    static float xs[N], ys[N];
+    static float t = 0.0f;
+    t += ImGui::GetIO().DeltaTime;
+
+    for (int i = 0; i < N; ++i) {
+        xs[i] = i * 0.001f;
+        ys[i] = sinf(15.0f * (xs[i] + 0.5f * t)) * cosf(10.0f * xs[i] - 0.3f * t) * (1.0f + 0.1f * sinf(5.0f * t));
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    ImGui::Begin("Time Series Plot", nullptr);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+
+    if (ImPlot::BeginPlot("Signal", ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Time [s]", "Amplitude");
+        ImPlot::SetupAxesLimits(0, 1, -1.5, 1.5);
+        ImPlot::PlotLine("Waveform", xs, ys, N);
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
+}
+
   // Update vertex and index buffer containing the imGui elements when required
   void updateBuffers() {
     ImDrawData *imDrawData = ImGui::GetDrawData();
@@ -836,4 +1109,5 @@ public:
       }
     }
   }
+
 };

@@ -12,6 +12,7 @@
 // iOS & macOS: getAssetPath() and getShaderBasePath() implemented externally for access to Obj-C++ path utilities
 const std::string getAssetPath()
 {
+    // TODO
 if (vks::tools::resourcePath != "") {
 	return vks::tools::resourcePath + "/assets/";
 }

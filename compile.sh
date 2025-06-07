@@ -1,12 +1,12 @@
 #!/bin/bash
 
-rm -rf build
+#rm -rf build
+#rm imgui.ini
 mkdir build
-rm imgui.ini
 cd build
 cmake ..
 #cmake -DCMAKE_BUILD_TYPE=Release ..
-make
+bear -- make -j
 cp bin/core ../bin/
 cd ..
 ./bin/core &

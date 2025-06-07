@@ -113,8 +113,8 @@ else()
         add_definitions(-DVK_EXAMPLE_ASSETS_DIR=\"assets/\")
         add_definitions(-DVK_EXAMPLE_SHADERS_DIR=\"shaders/\")
             
-        #add_definitions(-DVK_EXAMPLE_ASSETS_DIR=\"assets/\")
-        #add_definitions(-DVK_EXAMPLE_SHADERS_DIR=\"shaders/\")
+        #add_definitions(-DVK_EXAMPLE_ASSETS_DIR=\"~\")
+        #add_definitions(-DVK_EXAMPLE_SHADERS_DIR=\"~\")
 
 	endif()
 endif()

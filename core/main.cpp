@@ -1,8 +1,8 @@
 /*
  * Photon Core
- *
  */
 
+#include "VulkanTools.h"
 #include "VulkanglTFModel.h"
 #include "gui.hpp"
 #include "vulkanexamplebase.h"
@@ -24,6 +24,7 @@ public:
     vkglTF::Model logos;
     vkglTF::Model background;
     vkglTF::Model customModel; // new
+    vkglTF::Model aeroShell;
   } models;
 
   // step 2
@@ -127,12 +128,14 @@ public:
 
       VkDeviceSize offsets[1] = {0};
       // step 7
+      /*
       vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
                         customPipeline);
       vkCmdBindVertexBuffers(drawCmdBuffers[i], 0, 1, &particleBuffer.buffer,
                              offsets);
       vkCmdDraw(drawCmdBuffers[i], static_cast<uint32_t>(particles.size()), 1,
                 0, 0);
+                */
 
       if (uiSettings.displayBackground) {
         models.background.draw(drawCmdBuffers[i]);
@@ -282,6 +285,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     */
     // new blend stuff ^
 
+    /*
     // step 11
     // Particle vertex binding: Each particle has a position and velocity
     std::vector<VkVertexInputBindingDescription> particleVertexBinding = {
@@ -357,6 +361,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
 
     VK_CHECK_RESULT(vkCreateGraphicsPipelines(
         device, pipelineCache, 1, &customPipelineCI, nullptr, &customPipeline));
+    */
   }
 
   // Prepare and initialize uniform buffer containing shader uniforms
@@ -473,6 +478,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     // models.customModel.loadFromFile(getAssetPath() +
     // "models/custom_model.gltf",
     //                                vulkanDevice, queue, glTFLoadingFlags);
+    //models.aeroShell.loadFromFile(getAssetPath() + "models/aeroShell.gltf" , vulkanDevice, queue, glTFLoadingFlags);
   }
 
   void prepareImGui() {
@@ -483,7 +489,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
 
   void prepare() {
     VulkanExampleBase::prepare();
-    loadAssets();
+    //loadAssets();
     prepareUniformBuffers();
     // step 8
     // prepareParticles();

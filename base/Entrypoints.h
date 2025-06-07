@@ -103,17 +103,17 @@
  * Wayland / headless
  */
 #define PHOTON_MAIN()                                                          \
-  VulkanExample *vulkanExample;                                                \
+  Photon *photon;                                                \
   int main(const int argc, const char *argv[]) {                               \
     for (size_t i = 0; i < argc; i++) {                                        \
-      VulkanExample::args.push_back(argv[i]);                                  \
+      Photon::args.push_back(argv[i]);                                  \
     };                                                                         \
-    vulkanExample = new VulkanExample();                                       \
-    vulkanExample->initVulkan();                                               \
-    vulkanExample->setupWindow();                                              \
-    vulkanExample->prepare();                                                  \
-    vulkanExample->renderLoop();                                               \
-    delete (vulkanExample);                                                    \
+    photon = new VulkanExample();                                       \
+    photon->initVulkan();                                               \
+    photon->setupWindow();                                              \
+    photon->prepare();                                                  \
+    photon->renderLoop();                                               \
+    delete (photon);                                                    \
     return 0;                                                                  \
   }
 
