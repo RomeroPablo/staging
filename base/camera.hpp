@@ -1,11 +1,3 @@
-/*
-* Basic camera class providing a look-at and first-person camera
-*
-* Copyright (C) 2016-2024 by Sascha Willems - www.saschawillems.de
-*
-* This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
-*/
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>

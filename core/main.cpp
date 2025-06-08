@@ -9,6 +9,8 @@
 #include <imgui.h>
 #include <vulkan/vulkan_core.h>
 
+#define VK_USE_PLATFORM_WAYLAND_KHR
+
 VkSampler sampler;
 
 // ----------------------------------------------------------------------------

@@ -1,14 +1,3 @@
-/*
- * Vulkan entry points
- *
- * Platform specific macros for the example main entry points
- *
- * Copyright (C) 2024 by Sascha Willems - www.saschawillems.de
- *
- * This code is licensed under the MIT license (MIT)
- * (http://opensource.org/licenses/MIT)
- */
-
 #if defined(_WIN32)
 /*
  * Windows

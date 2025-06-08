@@ -1,11 +1,3 @@
-/*
- * Assorted commonly used Vulkan helper functions
- *
- * Copyright (C) 2016-2024 by Sascha Willems - www.saschawillems.de
- *
- * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
- */
-
 #include "VulkanTools.h"
 
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))

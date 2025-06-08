@@ -221,6 +221,10 @@ int backend(int argc, char* argv[]){
         dbc.load(argv[i]);
     }
 
+    dbc.load("./dbc/prohelion_wavesculptor22.dbc");
+    dbc.load("./dbc/tpee_mppt[B].dbc");
+    dbc.load("./dbc/tpee_mppt[A].dbc");
+
     
     std::unique_ptr<SerialPort> serial;
     std::unique_ptr<TcpSocket> tcp;

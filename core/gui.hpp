@@ -88,6 +88,8 @@ public:
     // SRS - Set ImGui font and style scale factors to handle retina and other
     // HiDPI displays
     ImGuiIO &io = ImGui::GetIO();
+    // grab font from file
+    io.Fonts->AddFontFromFileTTF("./fonts/Inter.ttf", 16.0f );
     io.FontGlobalScale = example->ui.scale;
     ImGuiStyle &style = ImGui::GetStyle();
     style.ScaleAllSizes(example->ui.scale);
@@ -709,53 +711,11 @@ public:
 
     ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Once);
 
-    /*
-    if(!ImGui::Begin("CAN Data")){
-        ImGui::End();
-    }
-
-    bool vis = ImGui::BeginTable("cantable", 3, flags);
-    if(vis){
-        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-        ImGui::TableSetupColumn("Len",ImGuiTableColumnFlags_WidthFixed, 40.0f);
-        ImGui::TableSetupColumn("Decoded");
-        ImGui::TableHeadersRow();
-
-        const CanStore& store = get_can_store();
-        for(uint32_t id = 0; id < CanStore::MAX_IDS; ++id)
-        {
-            //TODO:
-            //SIMD this
-            CanFrame frame;
-            if(!store.read(id, frame))
-                continue;
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("0x%03X", id);
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%d", frame.len);
-            ImGui::TableSetColumnIndex(2);
-            std::string decoded;
-            if(backend_decode(id,frame, decoded))
-                ImGui::TextUnformatted(decoded.c_str());
-            else {
-                char buf[3 * 8 + 1] = {0};
-                for(uint8_t i = 0; i < frame.len; ++i)
-                    sprintf(buf + i * 3, "%02X ", frame.data[i]);
-                ImGui::TextUnformatted(buf);
-            }
-        }
-    }
-
-    ImGui::EndTable();
-    ImGui::End();
-    */
-
     if (ImGui::Begin("CAN Data")) {
-        //ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
       if (ImGui::BeginTable("cantable", 3, flags)) {
-        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-        ImGui::TableSetupColumn("Len", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 48.0f);
+        ImGui::TableSetupColumn("Len", ImGuiTableColumnFlags_WidthFixed, 24.0f);
         ImGui::TableSetupColumn("Decoded");
         ImGui::TableHeadersRow();
 
