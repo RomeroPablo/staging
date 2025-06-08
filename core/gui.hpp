@@ -6,12 +6,15 @@
 #include "imgui_internal.h"
 #include "vulkanexamplebase.h"
 #include "windows.hpp"
+#include <csignal>
 #include <imgui.h>
 #include <implot.h>
 #include <implot3d.h>
 #include <unordered_map>
 #include <vector>
-#include "test.hpp"
+#include "backend.hpp"
+#include <thread>
+#include <cstdio>
 
 // Options and values to display/toggle from the UI
 struct UISettings {
@@ -65,6 +68,8 @@ private:
   int config_idx = 0;
   int vis_idx = 1;
 
+  std::thread backend_thread;
+
 public:
   // UI params are set via push constants
   struct PushConstBlock {
@@ -77,6 +82,8 @@ public:
     ImGui::CreateContext();
     ImPlot::CreateContext();
     ImPlot3D::CreateContext();
+
+    backend_thread = std::thread(backend, 0, nullptr);
 
     // SRS - Set ImGui font and style scale factors to handle retina and other
     // HiDPI displays
@@ -103,6 +110,9 @@ public:
     vkDestroyDescriptorPool(device->logicalDevice, descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device->logicalDevice, descriptorSetLayout,
                                  nullptr);
+
+    if (backend_thread.joinable())
+        backend_thread.join();
   }
 
   // Initialize styles, keys, etc.
@@ -690,6 +700,92 @@ public:
     ImGui::End();
   }
 
+  void CAN_TABLE(){
+          static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter |
+                                   ImGuiTableFlags_BordersV |
+                                   ImGuiTableFlags_RowBg |
+                                   ImGuiTableFlags_Resizable |
+                                   ImGuiTableFlags_ScrollY;
+
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Once);
+
+    /*
+    if(!ImGui::Begin("CAN Data")){
+        ImGui::End();
+    }
+
+    bool vis = ImGui::BeginTable("cantable", 3, flags);
+    if(vis){
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+        ImGui::TableSetupColumn("Len",ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("Decoded");
+        ImGui::TableHeadersRow();
+
+        const CanStore& store = get_can_store();
+        for(uint32_t id = 0; id < CanStore::MAX_IDS; ++id)
+        {
+            //TODO:
+            //SIMD this
+            CanFrame frame;
+            if(!store.read(id, frame))
+                continue;
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("0x%03X", id);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", frame.len);
+            ImGui::TableSetColumnIndex(2);
+            std::string decoded;
+            if(backend_decode(id,frame, decoded))
+                ImGui::TextUnformatted(decoded.c_str());
+            else {
+                char buf[3 * 8 + 1] = {0};
+                for(uint8_t i = 0; i < frame.len; ++i)
+                    sprintf(buf + i * 3, "%02X ", frame.data[i]);
+                ImGui::TextUnformatted(buf);
+            }
+        }
+    }
+
+    ImGui::EndTable();
+    ImGui::End();
+    */
+
+    if (ImGui::Begin("CAN Data")) {
+        //ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+      if (ImGui::BeginTable("cantable", 3, flags)) {
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+        ImGui::TableSetupColumn("Len", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("Decoded");
+        ImGui::TableHeadersRow();
+
+        const CanStore &store = get_can_store();
+        for (uint32_t id = 0; id < CanStore::MAX_IDS; ++id) {
+          CanFrame frame;
+          if (store.read(id, frame)) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("0x%03X", id);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", frame.len);
+            ImGui::TableSetColumnIndex(2);
+            std::string decoded;
+            if (backend_decode(id, frame, decoded))
+              ImGui::TextUnformatted(decoded.c_str());
+            else {
+              char buf[3 * 8 + 1] = {0};
+              for (uint8_t i = 0; i < frame.len; ++i)
+                sprintf(buf + i * 3, "%02X ", frame.data[i]);
+              ImGui::TextUnformatted(buf);
+            }
+          }
+        }
+        ImGui::EndTable();
+      }
+    }
+    ImGui::End();
+  }
+
   // Starts a new imGui frame and sets up windows and ui elements
   void newFrame(VulkanExampleBase *example, bool updateFrameGraph) {
     // move all this to init, make declarations in public class
@@ -719,8 +815,11 @@ public:
     // type of data being placed in the windows Update Window Plots, update
     // windows based on buffer data
 
+    CAN_TABLE();
+
+    
     SurfacePlot();
-    AnimatedTablePlot();
+    //AnimatedTablePlot();
 
     // TODO:
     // what do I want for the poster?
@@ -728,13 +827,13 @@ public:
     // better signal function (maybe something like noisy imu data)
     // heat data? like overlayed the battery ??
     // place freq floating window here
-    test_func();
-    TimeSeriesPlot();
-    MagnitudePlot();
-    PhasePlot();
-    PowerPlot();
-    SpherePointCloud();
-    HeatmapPlot();
+    // here asdfasdfasdf
+    //TimeSeriesPlot();
+    //MagnitudePlot();
+    //PhasePlot();
+    //PowerPlot();
+    //SpherePointCloud();
+    //HeatmapPlot();
    // BlackHolePointCloud();
 
     ImGui::Render();

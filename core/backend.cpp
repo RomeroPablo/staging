@@ -4,6 +4,7 @@
 #include "candb.hpp"
 #include "dbc.hpp"
 #include "config.hpp"
+#include "backend.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <iomanip>
@@ -16,6 +17,12 @@
 
 static CanStore can_store;
 static DbcParser dbc;
+
+const CanStore& get_can_store() { return can_store; }
+
+bool backend_decode(uint32_t id, const CanFrame &frame, std::string &out){
+    return dbc.decode(id, frame, out);
+}
 
 enum class ParseState : uint8_t {
     WaitStart,
@@ -147,8 +154,10 @@ void photon_proc(RingBuffer &ringBuffer){
     std::vector<uint8_t> temp(READ_CHUNK);
     while(true){
         size_t amount_read = ringBuffer.read(temp.data(), temp.size());
+        /*
         std::cout.write((char*)temp.data(), amount_read) << std::endl;
         std::cout.flush();
+        */
         parse((uint8_t*)temp.data(), amount_read);
     }
 }
@@ -199,7 +208,7 @@ enum source_t {
     local,
     remote
 };
-int main(int argc, char* argv[]){
+int backend(int argc, char* argv[]){
     (void)argc;(void)argv;
     int res = 0;
     if (argc != 0)
@@ -221,7 +230,7 @@ int main(int argc, char* argv[]){
     std::thread prod_t;
 
     if(source == local){
-        std::string portName = "/dev/pts/3";//PORT;
+        std::string portName = "/dev/pts/7";//PORT;
         unsigned baud = 115200;
         serial = std::make_unique<SerialPort>(portName, baud);
         prod_t = std::thread(serial_read, std::ref(*serial), std::ref(ringBuffer));
@@ -239,4 +248,5 @@ int main(int argc, char* argv[]){
     //user_prompt();
     prod_t.join();
     photon_t.join();
+    return 0;
 }
