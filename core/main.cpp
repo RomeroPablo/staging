@@ -152,7 +152,33 @@ public:
       }
 
       if (uiSettings.displayCustomModel) { // imgui to toggle visibility
+        VkViewport modelViewport = vks::initializers::viewport(gui->modelWindowSize.x, gui->modelWindowSize.y, 0.0f, 1.0f);
+        modelViewport.x = gui->modelWindowPos.x;
+        modelViewport.y = gui->modelWindowPos.y;
+        vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &modelViewport);
+
+        VkRect2D modelScissor = vks::initializers::rect2D(
+            (uint32_t)gui->modelWindowSize.x, (uint32_t)gui->modelWindowSize.y,
+            (int32_t)gui->modelWindowPos.x, (int32_t)gui->modelWindowPos.y);
+        vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &modelScissor);
+
+        struct PushData {
+          glm::mat4 transform;
+          glm::vec4 effectColor;
+        } pushData;
+
+        pushData.transform =
+            glm::translate(glm::mat4(1.0f), uiSettings.modelPosition) *
+            glm::scale(glm::mat4(1.0f), glm::vec3(uiSettings.modelScale));
+        pushData.effectColor = uiSettings.effectColor;
+        vkCmdPushConstants(drawCmdBuffers[i], pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT |
+                               VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0, sizeof(PushData), &pushData);
+
         models.customModel.draw(drawCmdBuffers[i]);
+        vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
+        vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
       }
 
       // Render imGui
@@ -189,8 +215,15 @@ public:
                                                 nullptr, &descriptorSetLayout));
 
     // Pipeline layout
+        VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4) + sizeof(glm::vec4);
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
         vks::initializers::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
+        pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
     VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo,
                                            nullptr, &pipelineLayout));
 
@@ -477,8 +510,8 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     models.logos.loadFromFile(getAssetPath() + "models/vulkanscenelogos.gltf",
                               vulkanDevice, queue, glTFLoadingFlags);
     // step 1
-    //models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
-    models.customModel.loadFromFile(getAssetPath() + "models/aero.gltf" , vulkanDevice, queue, glTFLoadingFlags);
+    models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
+    //models.customModel.loadFromFile(getAssetPath() + "models/aero.gltf" , vulkanDevice, queue, glTFLoadingFlags);
     //models.customModel.loadFromFile(getAssetPath() + "models/DataAcqLeaderBoard.gltf" , vulkanDevice, queue, glTFLoadingFlags);
 
   }
