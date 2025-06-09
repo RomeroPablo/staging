@@ -476,8 +476,8 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     models.logos.loadFromFile(getAssetPath() + "models/vulkanscenelogos.gltf",
                               vulkanDevice, queue, glTFLoadingFlags);
     // step 1
-    models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
-    //models.aeroShell.loadFromFile(getAssetPath() + "models/aeroShell.gltf" , vulkanDevice, queue, glTFLoadingFlags);
+    //models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
+    models.customModel.loadFromFile(getAssetPath() + "models/aero.gltf" , vulkanDevice, queue, glTFLoadingFlags);
   }
 
   void prepareImGui() {
