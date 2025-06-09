@@ -125,8 +125,7 @@ public:
                               VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
                               0, 1, &descriptorSet, 0, nullptr);
       // step 13? - not causing seg fault tho
-      // vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-      //                  pipeline);
+      vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
       VkDeviceSize offsets[1] = {0};
       // step 7
@@ -477,9 +476,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     models.logos.loadFromFile(getAssetPath() + "models/vulkanscenelogos.gltf",
                               vulkanDevice, queue, glTFLoadingFlags);
     // step 1
-    // models.customModel.loadFromFile(getAssetPath() +
-    // "models/custom_model.gltf",
-    //                                vulkanDevice, queue, glTFLoadingFlags);
+    models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
     //models.aeroShell.loadFromFile(getAssetPath() + "models/aeroShell.gltf" , vulkanDevice, queue, glTFLoadingFlags);
   }
 
@@ -491,7 +488,7 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
 
   void prepare() {
     VulkanExampleBase::prepare();
-    //loadAssets();
+    loadAssets();
     prepareUniformBuffers();
     // step 8
     // prepareParticles();

@@ -9,4 +9,4 @@ cmake ..
 bear -- make -j
 cp bin/core ../bin/
 cd ..
-./bin/core &
+./bin/core
