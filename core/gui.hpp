@@ -15,6 +15,7 @@
 #include "backend.hpp"
 #include <thread>
 #include <cstdio>
+#include <glm/gtc/type_ptr.hpp>
 
 // Options and values to display/toggle from the UI
 struct UISettings {
@@ -27,6 +28,10 @@ struct UISettings {
   std::array<float, 50> frameTimes{};
   float frameTimeMin = 9999.0f, frameTimeMax = 0.0f;
   float lightTimer = 0.0f;
+
+  glm::vec3 modelPosition = glm::vec3(0.0f);
+  float modelScale = 1.0f;
+  glm::vec4 effectColor = glm::vec4(1.0f);
 } uiSettings;
 
 class GUI {
@@ -72,6 +77,9 @@ private:
 
 public:
   // UI params are set via push constants
+  ImVec2 modelWindowPos = ImVec2(0, 0);
+  ImVec2 modelWindowSize = ImVec2(0, 0);
+
   struct PushConstBlock {
     glm::vec2 scale;
     glm::vec2 translate;
@@ -746,6 +754,18 @@ public:
     ImGui::End();
   }
 
+  void Modelwindow(){
+    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
+    ImGui::Begin("Model Window");
+    modelWindowPos = ImGui::GetWindowPos();
+    modelWindowSize = ImGui::GetWindowSize();
+    ImGui::SliderFloat3("Position", glm::value_ptr(uiSettings.modelPosition), -5.0f, 5.0f);
+    ImGui::SliderFloat("Scale", &uiSettings.modelScale, 0.1f, 5.0f);
+    ImGui::ColorEdit4("Effect", glm::value_ptr(uiSettings.effectColor));
+    ImGui::End();
+
+  }
+
   // Starts a new imGui frame and sets up windows and ui elements
   void newFrame(VulkanExampleBase *example, bool updateFrameGraph) {
     // move all this to init, make declarations in public class
@@ -777,17 +797,12 @@ public:
 
     CAN_TABLE();
 
-    
     SurfacePlot();
-    //AnimatedTablePlot();
 
-    // TODO:
-    // what do I want for the poster?
-    // lin pot histogram
-    // better signal function (maybe something like noisy imu data)
-    // heat data? like overlayed the battery ??
-    // place freq floating window here
-    // here asdfasdfasdf
+    Modelwindow();
+
+    // TODO
+    //AnimatedTablePlot();
     //TimeSeriesPlot();
     //MagnitudePlot();
     //PhasePlot();
