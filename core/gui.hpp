@@ -30,8 +30,11 @@ struct UISettings {
   float lightTimer = 0.0f;
 
   glm::vec3 modelPosition = glm::vec3(0.0f);
+  glm::vec3 modelRotation = glm::vec3(0.0f);
+  glm::vec3 modelScale3D = glm::vec3(1.0f);
   float modelScale = 1.0f;
   glm::vec4 effectColor = glm::vec4(1.0f);
+  int effectType = 0;
 } uiSettings;
 
 class GUI {
@@ -69,6 +72,7 @@ private:
   // gui configuratio
   Windows configuration;
   Windows visualization;
+  Windows demo;
   std::vector<Windows> tabs;
   int config_idx = 0;
   int vis_idx = 1;
@@ -249,11 +253,14 @@ public:
     // Window initialization
     visualization.parent_tab = "Visualization Window";
     configuration.parent_tab = "Configuration Window";
-    tabs = {visualization, configuration};
+    demo.parent_tab = "Demo Window";
+
+    tabs = {visualization, configuration, demo};
 
     tabs.at(config_idx).windows = {"CAN DBC", "Terminal",
                                    "etc"}; // default windows
-    // tabs.at(vis_idx).windows = {"erm1", "erm2", "erm3"};
+    tabs.at(vis_idx).windows = {"erm1", "erm2", "erm3"};
+    tabs.at(2).windows = {"t1", "t2", "t3"};
   }
 
   void setStyle(uint32_t index) {
@@ -760,10 +767,39 @@ public:
     modelWindowPos = ImGui::GetWindowPos();
     modelWindowSize = ImGui::GetWindowSize();
     ImGui::SliderFloat3("Position", glm::value_ptr(uiSettings.modelPosition), -5.0f, 5.0f);
+
+    ImGui::SliderFloat3("Rotation", glm::value_ptr(uiSettings.modelRotation), -180.0f, 180.0f);
+    ImGui::SliderFloat3("Scale XYZ", glm::value_ptr(uiSettings.modelScale3D), 0.1f, 5.0f);
+
     ImGui::SliderFloat("Scale", &uiSettings.modelScale, 0.1f, 5.0f);
     ImGui::ColorEdit4("Effect", glm::value_ptr(uiSettings.effectColor));
+
+    const char * effects[] = {"None", "Invert", "Grayscale"};
+    ImGui::Combo("Effect Type", &uiSettings.effectType, effects, IM_ARRAYSIZE(effects));
+
     ImGui::End();
 
+  }
+
+  void setupDocking(){
+      createMainSpace(tabs);
+      for(auto&tab : tabs){
+          createTabDock(tab);
+      }
+  }
+
+  void drawTabPlots(){
+      for(auto &tab : tabs){
+          for(auto & window : tab.windows){
+              createTSPlot(window.c_str());
+          }
+      }
+  }
+
+  void drawDemoWindows(){
+      CAN_TABLE();
+      SurfacePlot();
+      Modelwindow();
   }
 
   // Starts a new imGui frame and sets up windows and ui elements
@@ -772,6 +808,10 @@ public:
     ImGui::NewFrame();
     // create main space, needs to know the number of tabs, this is done, maybe
     // create a new type, "tab"
+    setupDocking();
+    drawTabPlots();
+    drawDemoWindows();
+    /*
     createMainSpace(tabs);
 
     // create the docking space for each tab, needs to know the # of windows
@@ -810,6 +850,7 @@ public:
     //SpherePointCloud();
     //HeatmapPlot();
    // BlackHolePointCloud();
+    */
 
     ImGui::Render();
   }

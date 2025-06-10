@@ -14,6 +14,7 @@ layout (binding = 0) uniform UBO
 layout (push_constant) uniform ModelPC {
         mat4 transform;
         vec4 effectColor;
+        int effectType;
 } pc;
 
 layout (location = 0) out vec3 outNormal;

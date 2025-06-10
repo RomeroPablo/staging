@@ -165,12 +165,19 @@ public:
         struct PushData {
           glm::mat4 transform;
           glm::vec4 effectColor;
+          int effectType;
         } pushData;
 
-        pushData.transform =
-            glm::translate(glm::mat4(1.0f), uiSettings.modelPosition) *
-            glm::scale(glm::mat4(1.0f), glm::vec3(uiSettings.modelScale));
+        //pushData.transform = glm::translate(glm::mat4(1.0f), uiSettings.modelPosition) * glm::scale(glm::mat4(1.0f), glm::vec3(uiSettings.modelScale));
+        glm::mat4 modelMat = glm::mat4(1.0f);//
+        modelMat = glm::translate(modelMat, uiSettings.modelPosition);//
+        modelMat = glm::rotate(modelMat, glm::radians(uiSettings.modelRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));//
+        modelMat = glm::rotate(modelMat, glm::radians(uiSettings.modelRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));//
+        modelMat = glm::rotate(modelMat, glm::radians(uiSettings.modelRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));//
+        modelMat = glm::scale(modelMat, uiSettings.modelScale3D * uiSettings.modelScale);//
+        pushData.transform = modelMat; //
         pushData.effectColor = uiSettings.effectColor;
+        pushData.effectType = uiSettings.effectType; //
         vkCmdPushConstants(drawCmdBuffers[i], pipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT |
                                VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -219,7 +226,8 @@ public:
     pushConstantRange.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(glm::mat4) + sizeof(glm::vec4);
+    //pushConstantRange.size = sizeof(glm::mat4) + sizeof(glm::vec4);
+    pushConstantRange.size = sizeof(glm::mat4) + sizeof(glm::vec4) + sizeof(int);
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
         vks::initializers::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
@@ -510,8 +518,8 @@ depthStencilState = vks::initializers::pipelineDepthStencilStateCreateInfo(
     models.logos.loadFromFile(getAssetPath() + "models/vulkanscenelogos.gltf",
                               vulkanDevice, queue, glTFLoadingFlags);
     // step 1
-    models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
-    //models.customModel.loadFromFile(getAssetPath() + "models/aero.gltf" , vulkanDevice, queue, glTFLoadingFlags);
+    //models.customModel.loadFromFile(getAssetPath() + "models/custom_model.gltf", vulkanDevice, queue, glTFLoadingFlags);
+    models.customModel.loadFromFile(getAssetPath() + "models/aero.gltf" , vulkanDevice, queue, glTFLoadingFlags);
     //models.customModel.loadFromFile(getAssetPath() + "models/DataAcqLeaderBoard.gltf" , vulkanDevice, queue, glTFLoadingFlags);
 
   }

@@ -11,7 +11,7 @@ layout (location = 0) out vec4 outFragColor;
 layout (push_constant) uniform ModelPC {
     mat4 transform;
     vec4 effectColor;
-
+    int effectType;
 } pc;
 
 void main() 
@@ -24,4 +24,10 @@ void main()
 	vec3 specular = pow(max(dot(R, V), 0.0), 16.0) * vec3(0.75);
     vec4 baseColor = vec4(diffuse * inColor * specular, 1.0);
     outFragColor = baseColor * inEffectColor;
+    if(pc.effectType == 1){
+        outFragColor.rgb = vec3(1.0) - outFragColor.rgb;
+    } else if(pc.effectType == 2){
+        float g = dot(outFragColor.rgb, vec3(0.299, 0.587, 0.114));
+        outFragColor = vec4(g, g, g, outFragColor.a);
+    }
 }

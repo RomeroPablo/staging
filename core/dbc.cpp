@@ -83,9 +83,6 @@ bool DbcParser::load(const std::string& path){
         }
     }
 
-    // debug print of parsed messages and signals
-    can_parse_debug();
-
     return true;
 }
 
