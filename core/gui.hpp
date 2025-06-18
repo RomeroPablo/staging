@@ -16,6 +16,10 @@
 #include <thread>
 #include <cstdio>
 #include <glm/gtc/type_ptr.hpp>
+#include <vulkan/vulkan_core.h>
+#include "ui_vert_spv.hpp"
+#include "ui_frag_spv.hpp"
+#include "Inter_ttf.hpp"
 
 // Options and values to display/toggle from the UI
 struct UISettings {
@@ -101,7 +105,8 @@ public:
     // HiDPI displays
     ImGuiIO &io = ImGui::GetIO();
     // grab font from file
-    io.Fonts->AddFontFromFileTTF("./fonts/Inter.ttf", 16.0f );
+    //io.Fonts->AddFontFromFileTTF("./fonts/Inter.ttf", 16.0f );
+    io.Fonts->AddFontFromMemoryTTF((void*)Inter_ttf, Inter_ttf_size, 16.0f);
     io.FontGlobalScale = example->ui.scale;
     ImGuiStyle &style = ImGui::GetStyle();
     style.ScaleAllSizes(example->ui.scale);
@@ -549,10 +554,14 @@ public:
 
     pipelineCreateInfo.pVertexInputState = &vertexInputState;
 
+    /*
     shaderStages[0] = example->loadShader(shadersPath + "imgui/ui.vert.spv",
                                           VK_SHADER_STAGE_VERTEX_BIT);
     shaderStages[1] = example->loadShader(shadersPath + "imgui/ui.frag.spv",
                                           VK_SHADER_STAGE_FRAGMENT_BIT);
+                                          */
+    shaderStages[0] = example->loadShader(ui_vert_spv, ui_vert_spv_size, VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = example->loadShader(ui_frag_spv, ui_frag_spv_size, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VK_CHECK_RESULT(
         vkCreateGraphicsPipelines(device->logicalDevice, pipelineCache, 1,
@@ -613,17 +622,27 @@ public:
     static float xs1[1001], ys1[1001];
     for (int i = 0; i < 1001; ++i) {
       xs1[i] = i * 0.001f;
-      ys1[i] = 0.5f + 0.5f * sinf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
+      ys1[i] = 0.5f + 0.5f * tanf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
+      //ys1[i] = 0.5f + i / 0.5f;
     }
 
     ImGui::Begin(windowName.c_str());
-    ImGui::Text(("Window Name: " + windowName).c_str());
+    ImGui::Text("Window Name: %s", windowName.c_str());
     if (ImPlot::BeginPlot("Sync")) {
       ImPlot::SetupAxes("x", "y");
-      ImPlot::PlotLine("f(x)", xs1, ys1, 1001);
+      ImPlot::PlotLine("f(x)", xs1, ys1, 500);
+      ImPlot::PlotLine("f(x)", xs1, ys1, 500);
       ImPlot::EndPlot();
     }
     ImGui::End();
+  }
+
+  void sourceConfigWindow(){
+      std::string inputString(16, '\0');
+      ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
+      ImGui::Begin("Source Input");
+      ImGui::InputTextWithHint("input source", "input source here", (char*)inputString.data(), inputString.size());
+      ImGui::End();
   }
 
   void AnimatedTablePlot() {
@@ -743,6 +762,7 @@ public:
             ImGui::Text("0x%03X", id);
             ImGui::TableSetColumnIndex(1);
             ImGui::Text("%d", frame.len);
+
             ImGui::TableSetColumnIndex(2);
             std::string decoded;
             if (backend_decode(id, frame, decoded))
@@ -781,6 +801,8 @@ public:
 
   }
 
+
+
   void setupDocking(){
       createMainSpace(tabs);
       for(auto&tab : tabs){
@@ -799,7 +821,9 @@ public:
   void drawDemoWindows(){
       CAN_TABLE();
       SurfacePlot();
-      Modelwindow();
+      //Modelwindow();
+      createTSPlot("test");
+      sourceConfigWindow();
   }
 
   // Starts a new imGui frame and sets up windows and ui elements
@@ -808,8 +832,8 @@ public:
     ImGui::NewFrame();
     // create main space, needs to know the number of tabs, this is done, maybe
     // create a new type, "tab"
-    setupDocking();
-    drawTabPlots();
+    //setupDocking();
+    //drawTabPlots();
     drawDemoWindows();
     /*
     createMainSpace(tabs);

@@ -28,6 +28,7 @@ struct DbcMessage {
 class DbcParser {
 public:
     bool load(const std::string& path);
+    bool loadFromMemory(const char* data, size_t size);
     bool decode(uint32_t id, const CanFrame& frame, std::string& out) const;
     void can_parse_debug();
 
@@ -38,3 +39,8 @@ private:
     std::unordered_map<std::string, std::unordered_map<int64_t, std::string>> _value_tables;
     std::unordered_map<uint32_t, DbcMessage> _messages;
 };
+
+// we currently have 3 unordered maps
+// value_map
+// _value_tables
+// _messages

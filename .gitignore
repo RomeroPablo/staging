@@ -2,7 +2,6 @@ build/
 .cache/
 ./build-linux/
 ./build-windows/
-imgui.ini
 temp.cpp
 notes
 temp/

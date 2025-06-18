@@ -1,5 +1,7 @@
 #include "vulkanexamplebase.h"
+#include "VulkanTools.h"
 #include <thread>
+#include <vulkan/vulkan_core.h>
 
 #if defined(VK_EXAMPLE_XCODE_GENERATED)
 #if (defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))
@@ -222,6 +224,17 @@ VkPipelineShaderStageCreateInfo VulkanExampleBase::loadShader(std::string fileNa
 	assert(shaderStage.module != VK_NULL_HANDLE);
 	shaderModules.push_back(shaderStage.module);
 	return shaderStage;
+}
+
+VkPipelineShaderStageCreateInfo VulkanExampleBase::loadShader(const uint32_t* code, size_t size, VkShaderStageFlagBits stage){
+    VkPipelineShaderStageCreateInfo shaderStage = {};
+    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStage.stage = stage;
+    shaderStage.module = vks::tools::loadShaderFromMemory(code, size, device);
+    shaderStage.pName = "main";
+    assert(shaderStage.module != VK_NULL_HANDLE);
+    shaderModules.push_back(shaderStage.module);
+    return shaderStage;
 }
 
 void VulkanExampleBase::nextFrame()
@@ -586,9 +599,10 @@ VulkanExampleBase::VulkanExampleBase()
 		std::string msg = "Could not locate asset path in \"" + getAssetPath() + "\" !";
 		MessageBox(NULL, msg.c_str(), "Fatal error", MB_OK | MB_ICONERROR);
 #else
-		std::cerr << "Error: Could not find asset path in " << getAssetPath() << "\n";
+        std::cout << "[!] Warning: no asset path" << std::endl;
+		//std::cerr << "Error: Could not find asset path in " << getAssetPath() << "\n";
 #endif
-		exit(-1);
+		//exit(-1);
 	}
 #endif
 

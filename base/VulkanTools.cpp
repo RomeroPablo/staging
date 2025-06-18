@@ -13,6 +13,7 @@ if (vks::tools::resourcePath != "") {
 #elif defined(VK_EXAMPLE_ASSETS_DIR)
 	return VK_EXAMPLE_ASSETS_DIR;
 #else
+    return ".";
 	return "./../assets/";
 #endif
 }
@@ -444,5 +445,18 @@ namespace vks
 			return (value + alignment - 1) & ~(alignment - 1);
 		}
 
-	}
+    VkShaderModule loadShaderFromMemory(const uint32_t* code, size_t size, VkDevice device){
+           VkShaderModule shaderModule;
+           VkShaderModuleCreateInfo moduleCreateInfo{};
+           moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+           moduleCreateInfo.pNext = nullptr;
+           moduleCreateInfo.flags = 0;
+           moduleCreateInfo.codeSize = size;
+           moduleCreateInfo.pCode = code;
+
+           VK_CHECK_RESULT(vkCreateShaderModule(device, &moduleCreateInfo, nullptr, &shaderModule));
+
+           return shaderModule;
+    }
+}
 }
