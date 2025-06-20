@@ -2,6 +2,7 @@
 // GUI
 // ----------------------------------------------------------------------------
 //
+#include "VulkanInitializers.hpp"
 #include "VulkanglTFModel.h"
 #include "imgui_internal.h"
 #include "vulkanexamplebase.h"
@@ -10,6 +11,7 @@
 #include <imgui.h>
 #include <implot.h>
 #include <implot3d.h>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -55,6 +57,11 @@ private:
   VkImage fontImage = VK_NULL_HANDLE;
   VkImageView fontView = VK_NULL_HANDLE;
 
+  VkImage sceneFallbackImage = VK_NULL_HANDLE;
+  VkDeviceMemory sceneFallbackMemory = VK_NULL_HANDLE;
+  VkImageView sceneView = VK_NULL_HANDLE;
+  bool ownsSceneView = false;
+
   VkPipelineCache pipelineCache;
   VkPipelineLayout pipelineLayout;
   VkPipeline pipeline;
@@ -92,6 +99,9 @@ public:
   struct PushConstBlock {
     glm::vec2 scale;
     glm::vec2 translate;
+    glm::vec2 invScreenSize;
+    glm::vec2 whitePixel;
+    float u_time;
   } pushConstBlock;
 
   GUI(VulkanExampleBase *example) : example(example) {
@@ -123,6 +133,11 @@ public:
     vkDestroyImage(device->logicalDevice, fontImage, nullptr);
     vkDestroyImageView(device->logicalDevice, fontView, nullptr);
     vkFreeMemory(device->logicalDevice, fontMemory, nullptr);
+    if (ownsSceneView) {
+      vkDestroyImage(device->logicalDevice, sceneFallbackImage, nullptr);
+      vkFreeMemory(device->logicalDevice, sceneFallbackMemory, nullptr);
+      vkDestroyImageView(device->logicalDevice, sceneView, nullptr);
+    }
     vkDestroySampler(device->logicalDevice, sampler, nullptr);
     vkDestroyPipelineCache(device->logicalDevice, pipelineCache, nullptr);
     vkDestroyPipeline(device->logicalDevice, pipeline, nullptr);
@@ -232,6 +247,7 @@ public:
     PhotonStyle.ItemSpacing = ImVec2(12.0f, 8.0f);
 
     setStyle(0);
+    //ApplyModernPhotonStyle();
 
     // Dimensions
     ImGuiIO &io = ImGui::GetIO();
@@ -269,6 +285,100 @@ public:
     tabs.at(2).windows = {"t1", "t2", "t3"};
   }
 
+  void ApplyModernPhotonStyle()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* C = style.Colors;
+
+    // — Rounded corners everywhere —
+    style.WindowRounding    = 10.0f;
+    style.FrameRounding     = 6.0f;
+    style.PopupRounding     = 6.0f;
+    style.ScrollbarRounding = 8.0f;
+    style.GrabRounding      = 5.0f;
+    style.TabRounding       = 4.0f;
+
+    // — Padding & spacing —
+    style.WindowPadding     = {15, 15};
+    style.FramePadding      = {10, 6};
+    style.ItemSpacing       = {10, 8};
+    style.ItemInnerSpacing  = {6, 6};
+
+    // — Base colors (glass-like) —
+    ImVec4 bg        = {0.03f, 0.03f, 0.05f, 0.85f}; // deep, semi-transparent backdrop
+    ImVec4 childBg   = {0, 0, 0, 0};                 // fully transparent for panels
+    ImVec4 popupBg   = {0.12f, 0.12f, 0.15f, 0.9f};  // dark popup with opacity
+    ImVec4 border    = {0.20f, 0.20f, 0.25f, 1.0f};
+    ImVec4 separator = {0.30f, 0.30f, 0.35f, 1.0f};
+
+    C[ImGuiCol_WindowBg]            = bg;
+    C[ImGuiCol_ChildBg]             = childBg;
+    C[ImGuiCol_PopupBg]             = popupBg;
+    C[ImGuiCol_Border]              = border;
+    C[ImGuiCol_Separator]           = separator;
+
+    // — Text —
+    C[ImGuiCol_Text]                = {0.92f, 0.92f, 0.95f, 1.0f};
+    C[ImGuiCol_TextDisabled]        = {0.55f, 0.55f, 0.60f, 1.0f};
+
+    // — Accent gradient colors —
+    ImVec4 accent       = {0.18f, 0.55f, 0.70f, 0.8f};   // base
+    ImVec4 accentHover  = {0.14f, 0.45f, 0.60f, 0.8f};
+    ImVec4 accentActive = {0.10f, 0.34f, 0.45f, 0.8f};
+
+    // Buttons
+    C[ImGuiCol_Button]             = accent;
+    C[ImGuiCol_ButtonHovered]      = accentHover;
+    C[ImGuiCol_ButtonActive]       = accentActive;
+
+    // Headers (e.g. tree nodes, collapsibles)
+    C[ImGuiCol_Header]             = accent;
+    C[ImGuiCol_HeaderHovered]      = accentHover;
+    C[ImGuiCol_HeaderActive]       = accentActive;
+
+    // Frame (inputs, sliders)
+    C[ImGuiCol_FrameBg]            = {0.10f, 0.10f, 0.12f, 0.8f};
+    C[ImGuiCol_FrameBgHovered]     = accentHover;
+    C[ImGuiCol_FrameBgActive]      = accentActive;
+    C[ImGuiCol_SliderGrab]         = accent;
+    C[ImGuiCol_SliderGrabActive]   = accentActive;
+    C[ImGuiCol_CheckMark]          = {1.0f, 1.0f, 1.0f, 1.0f};
+
+    // Tabs
+    C[ImGuiCol_Tab]                = {0.10f, 0.10f, 0.12f, 0.8f};
+    C[ImGuiCol_TabHovered]         = accentHover;
+    C[ImGuiCol_TabActive]          = accentActive;
+    C[ImGuiCol_TabUnfocused]       = {0.05f, 0.05f, 0.07f, 0.7f};
+    C[ImGuiCol_TabUnfocusedActive] = {0.08f, 0.08f, 0.10f, 0.7f};
+
+    // Scrollbars
+    C[ImGuiCol_ScrollbarBg]        = {0.00f, 0.00f, 0.00f, 0.5f};
+    C[ImGuiCol_ScrollbarGrab]      = accent;
+    C[ImGuiCol_ScrollbarGrabHovered] = accentHover;
+    C[ImGuiCol_ScrollbarGrabActive]  = accentActive;
+
+    // Plot lines & histograms
+    C[ImGuiCol_PlotLines]          = accent;
+    C[ImGuiCol_PlotLinesHovered]   = {1.0f,1.0f,1.0f,1.0f};
+    C[ImGuiCol_PlotHistogram]      = accent;
+    C[ImGuiCol_PlotHistogramHovered] = accentHover;
+
+    // Misc
+    C[ImGuiCol_DragDropTarget]     = {1.0f, 1.0f, 1.0f, 0.9f};
+    C[ImGuiCol_NavHighlight]       = accentHover;
+    C[ImGuiCol_ModalWindowDimBg]   = {0,0,0,0.7f};
+    C[ImGuiCol_DockingEmptyBg]     = {0,0,0,0};
+
+    // If you want a quick “top‐to‐bottom” gradient in your windows:
+    //
+    //   auto dl = ImGui::GetWindowDrawList();
+    //   ImVec2 p = ImGui::GetWindowPos(), sz = ImGui::GetWindowSize();
+    //   dl->AddRectFilledMultiColor(
+    //     p, {p.x+sz.x, p.y+sz.y},
+    //     IM_COL32(30,30,60,200), IM_COL32(10,10,30,200),
+    //     IM_COL32(10,10,30,200), IM_COL32(30,30,60,200));
+}
+
   void setStyle(uint32_t index) {
     switch (index) {
     case 0: {
@@ -290,8 +400,89 @@ public:
 
   // Initialize all Vulkan resources used by the ui
   void initResources(VkRenderPass renderPass, VkQueue copyQueue,
-                     const std::string &shadersPath) {
+                     const std::string &shadersPath, VkImageView sceneImageView = VK_NULL_HANDLE) {
     ImGuiIO &io = ImGui::GetIO();
+
+    // --- init scene view ---
+    // If the application supplies a scene texture view, use it directly.
+    // Otherwise create a 1x1 black image so the descriptor set remains valid
+    // without sampling the font atlas.
+    if (sceneImageView != VK_NULL_HANDLE) {
+      sceneView = sceneImageView;
+      ownsSceneView = false;
+    } else {
+      ownsSceneView = true;
+      VkImageCreateInfo sceneInfo = vks::initializers::imageCreateInfo();
+      sceneInfo.imageType = VK_IMAGE_TYPE_2D;
+      sceneInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+      sceneInfo.extent.width = 1;
+      sceneInfo.extent.height = 1;
+      sceneInfo.extent.depth = 1;
+      sceneInfo.mipLevels = 1;
+      sceneInfo.arrayLayers = 1;
+      sceneInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+      sceneInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+      sceneInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+      sceneInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+      sceneInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      VK_CHECK_RESULT(
+          vkCreateImage(device->logicalDevice, &sceneInfo, nullptr, &sceneFallbackImage));
+      VkMemoryRequirements sceneReqs;
+      vkGetImageMemoryRequirements(device->logicalDevice, sceneFallbackImage, &sceneReqs);
+      VkMemoryAllocateInfo sceneAlloc = vks::initializers::memoryAllocateInfo();
+      sceneAlloc.allocationSize = sceneReqs.size;
+      sceneAlloc.memoryTypeIndex = device->getMemoryType(
+          sceneReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+      VK_CHECK_RESULT(vkAllocateMemory(device->logicalDevice, &sceneAlloc, nullptr,
+                                       &sceneFallbackMemory));
+      VK_CHECK_RESULT(vkBindImageMemory(device->logicalDevice, sceneFallbackImage,
+                                        sceneFallbackMemory, 0));
+
+      VkImageViewCreateInfo sceneViewInfo = vks::initializers::imageViewCreateInfo();
+      sceneViewInfo.image = sceneFallbackImage;
+      sceneViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+      sceneViewInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+      sceneViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      sceneViewInfo.subresourceRange.levelCount = 1;
+      sceneViewInfo.subresourceRange.layerCount = 1;
+      VK_CHECK_RESULT(vkCreateImageView(device->logicalDevice, &sceneViewInfo, nullptr,
+                                        &sceneView));
+
+      // Upload a black pixel so sampling returns transparent black
+      uint32_t black = 0;
+      vks::Buffer sceneStaging;
+      VK_CHECK_RESULT(device->createBuffer(
+          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+          &sceneStaging, sizeof(uint32_t)));
+      sceneStaging.map();
+      memcpy(sceneStaging.mapped, &black, sizeof(uint32_t));
+      sceneStaging.unmap();
+      VkCommandBuffer sceneCmd =
+          device->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+      vks::tools::setImageLayout(sceneCmd, sceneFallbackImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                                 VK_IMAGE_LAYOUT_UNDEFINED,
+                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                 VK_PIPELINE_STAGE_HOST_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT);
+      VkBufferImageCopy sceneCopyRegion{};
+      sceneCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      sceneCopyRegion.imageSubresource.layerCount = 1;
+      sceneCopyRegion.imageExtent.width = 1;
+      sceneCopyRegion.imageExtent.height = 1;
+      sceneCopyRegion.imageExtent.depth = 1;
+      vkCmdCopyBufferToImage(sceneCmd, sceneStaging.buffer, sceneFallbackImage,
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                             &sceneCopyRegion);
+      vks::tools::setImageLayout(sceneCmd, sceneFallbackImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      device->flushCommandBuffer(sceneCmd, copyQueue, true);
+      sceneStaging.destroy();
+    }
+    // --- end scene view ---
 
     // Create font texture
     unsigned char *fontData;
@@ -338,6 +529,8 @@ public:
                                      nullptr, &fontMemory));
     VK_CHECK_RESULT(
         vkBindImageMemory(device->logicalDevice, fontImage, fontMemory, 0));
+
+    
 
     // Image view
     VkImageViewCreateInfo viewInfo = vks::initializers::imageViewCreateInfo();
@@ -411,7 +604,7 @@ public:
     // Descriptor pool
     std::vector<VkDescriptorPoolSize> poolSizes = {
         vks::initializers::descriptorPoolSize(
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)};
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2)};
     VkDescriptorPoolCreateInfo descriptorPoolInfo =
         vks::initializers::descriptorPoolCreateInfo(poolSizes, 2);
     VK_CHECK_RESULT(vkCreateDescriptorPool(
@@ -422,6 +615,9 @@ public:
         vks::initializers::descriptorSetLayoutBinding(
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             VK_SHADER_STAGE_FRAGMENT_BIT, 0),
+        vks::initializers::descriptorSetLayoutBinding(
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+                VK_SHADER_STAGE_FRAGMENT_BIT, 1),
     };
     VkDescriptorSetLayoutCreateInfo descriptorLayout =
         vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
@@ -435,12 +631,17 @@ public:
                                                      &descriptorSetLayout, 1);
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device->logicalDevice, &allocInfo,
                                              &descriptorSet));
+    VkDescriptorImageInfo sceneDescriptor = vks::initializers::descriptorImageInfo(
+            sampler, fontView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VkDescriptorImageInfo fontDescriptor =
         vks::initializers::descriptorImageInfo(
             sampler, fontView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
         vks::initializers::writeDescriptorSet(
             descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0,
+            &sceneDescriptor),
+        vks::initializers::writeDescriptorSet(
+            descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
             &fontDescriptor)};
     vkUpdateDescriptorSets(device->logicalDevice,
                            static_cast<uint32_t>(writeDescriptorSets.size()),
@@ -457,7 +658,7 @@ public:
     // Pipeline layout
     // Push constants for UI rendering parameters
     VkPushConstantRange pushConstantRange =
-        vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT,
+        vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                              sizeof(PushConstBlock), 0);
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
         vks::initializers::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
@@ -619,27 +820,28 @@ public:
     ImGui::End();
   }
 
-  void createTSPlot(std::string windowName) {
-    static float xs1[1001], ys1[1001];
-    for (int i = 0; i < 1001; ++i) {
-      xs1[i] = i * 0.001f;
-      ys1[i] = 0.5f + 0.5f * tanf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
-      //ys1[i] = 0.5f + i / 0.5f;
-    }
+  void tsPlotContents(const char* label){
+      static float xs1[1001], ys1[1001];
+      for (int i = 0; i < 1001; ++i) {
+        xs1[i] = i * 0.001f;
+        ys1[i] = 0.5f + 0.5f * tanf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
+      }
+      if (ImPlot::BeginPlot(label)) {
+        ImPlot::SetupAxes("x", "y");
+        ImPlot::PlotLine("f(x)", xs1, ys1, 500);
+        ImPlot::PlotLine("f(x)", xs1, ys1, 500);
+        ImPlot::EndPlot();
+      }
+  }
 
+  void createTSPlot(std::string windowName) {
     ImGui::Begin(windowName.c_str());
     ImGui::Text("Window Name: %s", windowName.c_str());
-    if (ImPlot::BeginPlot("Sync")) {
-      ImPlot::SetupAxes("x", "y");
-      ImPlot::PlotLine("f(x)", xs1, ys1, 500);
-      ImPlot::PlotLine("f(x)", xs1, ys1, 500);
-      ImPlot::EndPlot();
-    }
+    tsPlotContents("Sync");
     ImGui::End();
   }
 
-  void sourceConfigWindow(){
-
+  void sourceConfigContents(){
       // -- state --
       static int input_flag = 0;
       static int close_flag = 0;
@@ -656,24 +858,20 @@ public:
       static std::string ipHint     = "e.g. 192.168.1.2";
       static std::string portHint   = "e.g. 8080";
 
-      
-      ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
-      ImGui::Begin("Data Source");
-
       const char* protocol_list[] = {"Serial", "TCP"};
       static int protocol_idx = 0;
-      ImGui::Combo("##", &protocol_idx, protocol_list, ((int)sizeof(protocol_list) / sizeof(*(protocol_list))));
+      ImGui::Combo("##01", &protocol_idx, protocol_list, ((int)sizeof(protocol_list) / sizeof(*(protocol_list))));
       ImGui::SameLine();
       if(ImGui::Button("Close Connection"))
         close_flag = 1;
 
       if(protocol_idx == 0){
-        ImGui::InputTextWithHint("##", serialHint.c_str(), serialBuf, sizeof(serialBuf));
-        ImGui::InputTextWithHint("##", baudHint.c_str(), baudBuf, sizeof(baudBuf), ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputTextWithHint("##02", serialHint.c_str(), serialBuf, sizeof(serialBuf));
+        ImGui::InputTextWithHint("##03", baudHint.c_str(), baudBuf, sizeof(baudBuf), ImGuiInputTextFlags_CharsDecimal);
       }
       if(protocol_idx == 1){
-        ImGui::InputTextWithHint("##", ipHint.c_str(), ipBuf, sizeof(ipBuf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsNoBlank);
-        ImGui::InputTextWithHint("##", portHint.c_str(), portBuf, sizeof(baudBuf), ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputTextWithHint("##04", ipHint.c_str(), ipBuf, sizeof(ipBuf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsNoBlank);
+        ImGui::InputTextWithHint("##05", portHint.c_str(), portBuf, sizeof(baudBuf), ImGuiInputTextFlags_CharsDecimal);
        }
       ImGui::SameLine();
       if(ImGui::Button("Connect"))
@@ -704,6 +902,12 @@ public:
 
           serialBuf[0] = baudBuf[0] = ipBuf[0] = portBuf[0] = '\0';
       }
+  }
+
+  void sourceConfigWindow(){
+      ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
+      ImGui::Begin("Data Source");
+      sourceConfigContents();
       ImGui::End();
   }
 
@@ -798,17 +1002,12 @@ public:
     ImGui::End();
   }
 
-  void CAN_TABLE(){
-          static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter |
+  void canTableContents(){
+    static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter |
                                    ImGuiTableFlags_BordersV |
                                    ImGuiTableFlags_RowBg |
                                    ImGuiTableFlags_Resizable |
                                    ImGuiTableFlags_ScrollY;
-
-    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Once);
-
-    if (ImGui::Begin("CAN Data")) {
-        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
       if (ImGui::BeginTable("cantable", 3, flags)) {
         ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 48.0f);
         ImGui::TableSetupColumn("Len", ImGuiTableColumnFlags_WidthFixed, 24.0f);
@@ -839,9 +1038,30 @@ public:
         }
         ImGui::EndTable();
       }
-    }
-    ImGui::End();
   }
+
+  void CAN_TABLE(){
+    ImGui::SetNextWindowSize(ImVec2(480, 480), ImGuiCond_Once);
+      ImGui::Begin("CAN Data");
+      ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+      canTableContents();
+      ImGui::End();
+  }
+
+void modelWindowContents(){
+    modelWindowPos = ImGui::GetWindowPos();
+    modelWindowSize = ImGui::GetWindowSize();
+    ImGui::SliderFloat3("Position", glm::value_ptr(uiSettings.modelPosition), -5.0f, 5.0f);
+
+    ImGui::SliderFloat3("Rotation", glm::value_ptr(uiSettings.modelRotation), -180.0f, 180.0f);
+    ImGui::SliderFloat3("Scale XYZ", glm::value_ptr(uiSettings.modelScale3D), 0.1f, 5.0f);
+
+    ImGui::SliderFloat("Scale", &uiSettings.modelScale, 0.1f, 5.0f);
+    ImGui::ColorEdit4("Effect", glm::value_ptr(uiSettings.effectColor));
+
+    const char * effects[] = {"None", "Invert", "Grayscale"};
+    ImGui::Combo("Effect Type", &uiSettings.effectType, effects, IM_ARRAYSIZE(effects));
+}
 
   void Modelwindow(){
     ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
@@ -860,7 +1080,6 @@ public:
     ImGui::Combo("Effect Type", &uiSettings.effectType, effects, IM_ARRAYSIZE(effects));
 
     ImGui::End();
-
   }
 
 
@@ -880,11 +1099,8 @@ public:
       }
   }
 
-void dbcConfigWindow(){
+void dbcConfigContents(){
       static char pathBuf[256] = "";
-      ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
-      ImGui::Begin("DBC Config");
-
       ImGui::InputText("File", pathBuf, sizeof(pathBuf));
       ImGui::SameLine();
       if(ImGui::Button("Load")){
@@ -917,69 +1133,143 @@ void dbcConfigWindow(){
               forward_dbc_unload(files[i]);
           }
       }
+  }
 
+void dbcConfigWindow(){
+      ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Once);
+      ImGui::Begin("DBC Config");
+      dbcConfigContents();
       ImGui::End();
-  }
+    }
 
-  void drawDemoWindows(){
-      CAN_TABLE();
-      SurfacePlot();
-      //Modelwindow();
-      createTSPlot("test");
-      sourceConfigWindow();
-      dbcConfigWindow();
-  }
+void configTabContents(){
+    // -- Top source config --
+    ImGui::BeginChild("src_cfg", ImVec2(0, 120), true,
+                      ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize);
+    sourceConfigContents();
+    ImGui::EndChild();
 
-  // Starts a new imGui frame and sets up windows and ui elements
+    // grab total width before splitting
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+
+    ImGui::BeginChild("mid", ImVec2(avail.x, avail.y), false,
+                      ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize);
+
+    // 2 columns, no border
+    ImGui::Columns(2, "cfgcols", false);
+    // set column 0 to 75% of the total:
+    ImGui::SetColumnWidth(0, avail.x * 0.75f);
+
+    // column 0
+    ImGui::BeginChild("cantab", ImVec2(0,0), true);
+    canTableContents();
+    ImGui::EndChild();
+
+    ImGui::NextColumn();
+
+    // column 1
+    ImGui::BeginChild("dbc", ImVec2(0,0), true);
+    dbcConfigContents();
+    ImGui::EndChild();
+
+    ImGui::Columns(1);
+    ImGui::EndChild();
+}
+
+void drawConfigWindow(){
+      ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Once);
+      if(ImGui::Begin("Config Window")){
+          configTabContents();
+      }
+      ImGui::End();
+}
+
+void imguiGrad(){
+      auto dl = ImGui::GetWindowDrawList();
+        ImVec2  p     = ImGui::GetWindowPos();
+        ImVec2  sz    = ImGui::GetWindowSize();
+        ImVec2  p_max = ImVec2(p.x + sz.x, p.y + sz.y);
+
+        // fully opaque black at both top corners, fully opaque white at both bottom corners
+        ImU32 col_top = IM_COL32(0, 0, 0, 255);
+        ImU32 col_bot = IM_COL32(50, 50, 50, 255);
+
+        dl->AddRectFilledMultiColor(
+    p,       // upper‐left
+    p_max,   // lower‐right
+    col_top, // upper‐left corner
+    col_top, // upper‐right corner
+    col_bot, // lower‐right corner
+    col_bot  // lower‐left corner
+);
+        /*
+        for (int i = 0; i < (int)sz.y; ++i)
+{
+    float t = float(i) / sz.y;                   // 0.0 at top → 1.0 at bottom
+    ImU32  c = IM_COL32(
+        (int)(t * 255), (int)(t * 255), (int)(t * 255), 255
+    );
+    dl->AddRectFilled(
+        ImVec2(p.x,      p.y + i),
+        ImVec2(p.x + sz.x, p.y + i + 1),
+        c
+    );
+}
+*/
+
+}
+
+void drawMainWindow(){
+      ImGuiViewport* vp = ImGui::GetMainViewport();
+      ImGui::SetNextWindowPos(vp->WorkPos);
+      ImGui::SetNextWindowSize(vp->WorkSize);
+      ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+      ImGui::Begin("Main", nullptr, flags);
+
+      //imguiGrad();
+      if(ImGui::BeginTabBar("maintabs")){
+
+          if(ImGui::BeginTabItem("Config Window")){
+              configTabContents();
+              ImGui::EndTabItem();
+          }
+
+          if(ImGui::BeginTabItem("model")){
+            modelWindowContents();
+            ImGui::EndTabItem();
+          }
+
+          auto loaded = get_loaded_dbcs();
+          for(const auto &name : loaded){
+              if(ImGui::BeginTabItem(name.c_str())){
+                  tsPlotContents(name.c_str());
+                  ImGui::EndTabItem();
+              }
+          }
+
+          auto builtins = list_builtin_dbcs();
+          for(const auto &b : builtins){
+              if(!b.second) continue;
+              if(ImGui::BeginTabItem(b.first.c_str())){
+                  tsPlotContents(b.first.c_str());
+                  ImGui::EndTabItem();
+              }
+          }
+
+          ImGui::EndTabBar();
+      }
+      ImGui::End();
+}
+
+
+
+  /*** Starts a new imGui frame and sets up windows and ui elements ***/
+    // HERE HERE HERE
   void newFrame(VulkanExampleBase *example, bool updateFrameGraph) {
-    // move all this to init, make declarations in public class
+    // you gotta clean all this shit lmao
     ImGui::NewFrame();
-    // create main space, needs to know the number of tabs, this is done, maybe
-    // create a new type, "tab"
-    //setupDocking();
-    //drawTabPlots();
-    drawDemoWindows();
-    /*
-    createMainSpace(tabs);
-
-    // create the docking space for each tab, needs to know the # of windows
-    // and it's properties, make placement decisions
-    for (int i = 0; i < tabs.size(); i++) {
-      createTabDock(tabs.at(i));
-    }
-
-    // assigns the different windows to plots
-    for (int i = 0; i < tabs.at(0).windows.size(); i++) {
-      createTSPlot(tabs.at(0).windows.at(i).c_str());
-    }
-
-    for (int i = 0; i < tabs.at(1).windows.size(); i++) {
-      createTSPlot(tabs.at(1).windows.at(i).c_str());
-    }
-
-    // Create the Main Space, need to know how many tabs you want
-    // Create Docking Area for each Tab, need to know how many windows it wants,
-    // and the dimensions of the windows Create Window Plots, need to know the
-    // type of data being placed in the windows Update Window Plots, update
-    // windows based on buffer data
-
-    CAN_TABLE();
-
-    SurfacePlot();
-
-    Modelwindow();
-
-    // TODO
-    //AnimatedTablePlot();
-    //TimeSeriesPlot();
-    //MagnitudePlot();
-    //PhasePlot();
-    //PowerPlot();
-    //SpherePointCloud();
-    //HeatmapPlot();
-   // BlackHolePointCloud();
-    */
-
+    drawMainWindow();
     ImGui::Render();
   }
 
@@ -1317,8 +1607,11 @@ void HeatmapPlot() {
     pushConstBlock.scale =
         glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
     pushConstBlock.translate = glm::vec2(-1.0f);
+    pushConstBlock.invScreenSize = glm::vec2(1.0f / io.DisplaySize.x, 1.0f / io.DisplaySize.y);
+    pushConstBlock.whitePixel = glm::vec2(io.Fonts->TexUvWhitePixel.x, io.Fonts->TexUvWhitePixel.y);
+    pushConstBlock.u_time = (float)ImGui::GetTime();
     vkCmdPushConstants(commandBuffer, pipelineLayout,
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock),
+                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstBlock),
                        &pushConstBlock);
 
     // Render commands
