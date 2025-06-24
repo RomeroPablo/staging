@@ -16,12 +16,14 @@
 #include <memory>
 #include <atomic>
 #include <utility>
+#include <string>
 
 #include "bps_dbc.hpp"
 #include "controls_dbc.hpp"
 #include "prohelion_wavesculptor22_dbc.hpp"
 #include "tpee_mppt_A__dbc.hpp"
 #include "tpee_mppt_B__dbc.hpp"
+#include "daq_dbc.hpp"
 
 static CanStore can_store;
 static DbcParser dbc;
@@ -39,7 +41,9 @@ static BuiltinDbc builtin_dbcs[] = {
     {"Wavesculptor22", prohelion_wavesculptor22_dbc, prohelion_wavesculptor22_dbc_size, true},
     {"MPPT A", tpee_mppt_A__dbc, tpee_mppt_A__dbc_size, true},
     {"MPPT B", tpee_mppt_B__dbc, tpee_mppt_B__dbc_size, true},
-    {"Controls", controls_dbc, controls_dbc_size, true}
+    {"Controls", controls_dbc, controls_dbc_size, true},
+    {"DAQ", daq_dbc, daq_dbc_size, true}
+
 };
 static std::mutex builtin_mtx;
 
@@ -263,6 +267,7 @@ void serial_read(SerialPort &serial, RingBuffer &ringBuffer){
         size_t amount_read = serial.read(temp.data(), temp.size());
         if (amount_read > 0) ringBuffer.write(temp.data(), amount_read);
     }
+    //OutputDebugString("Closing Connection!\n");
 }
 void tcp_read(TcpSocket &socket, RingBuffer &ringBuffer){
     std::vector<uint8_t> temp(READ_CHUNK);
@@ -393,6 +398,7 @@ int backend(int argc, char* argv[]){
 
         if(new_source_flag.load()){ // -- new source --
             new_source_flag.store(false, std::memory_order_release);
+            
 
             // -- kill old thread --
             if(prod_t.joinable()){
@@ -407,6 +413,7 @@ int backend(int argc, char* argv[]){
             // -- false alarm --
             if(prot == -1){
                 // if we keep prot to -1, we just kill the thread
+                //OutputDebugString("[!] Kill Source\n");
                 continue;
             }
 
@@ -415,11 +422,15 @@ int backend(int argc, char* argv[]){
 
             // -- grab params --
             if((source_t)prot == local){
+                serial.reset();
                 std::lock_guard<std::mutex> lock(serialSourceBuffer.mtx);
                 fd = serialSourceBuffer.fd;
+                //OutputDebugString(fd.c_str());
+                //OutputDebugString("\n");
                 cfg = std::stoi(serialSourceBuffer.baud);
             }
             if((source_t)prot == remote){
+                tcp.reset();
                 std::lock_guard<std::mutex> lock(tcpSourceBuffer.mtx);
                 fd = tcpSourceBuffer.fd;
                 cfg = std::stoi(tcpSourceBuffer.port);
@@ -428,10 +439,12 @@ int backend(int argc, char* argv[]){
             // -- create threads --
             try{
                 if((source_t)prot == local){
+                    //OutputDebugString("[+] Attempting Serial\n");
                     serial = std::make_unique<SerialPort>(fd, cfg);
                     prod_t = std::thread(serial_read, std::ref(*serial), std::ref(ringBuffer));
                 }
                 if((source_t)prot == remote){
+                    //OutputDebugString("[!] Attempting TCP\n");
                     tcp = std::make_unique<TcpSocket>(fd, cfg);
                     prod_t = std::thread(tcp_read, std::ref(*tcp), std::ref(ringBuffer));
                 }

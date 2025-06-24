@@ -29,7 +29,7 @@ struct UISettings {
   bool displayModels = false;
   bool displayLogos = false;
   bool displayBackground = false;
-  bool displayCustomModel = true; // NEW
+  bool displayCustomModel = false; // NEW
   bool animateLight = false;
   float lightSpeed = 0.25f;
   std::array<float, 50> frameTimes{};
@@ -259,6 +259,7 @@ public:
     io.DisplaySize = ImVec2(width, height);
     io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 #if defined(_WIN32)
+    /*
     // If we directly work with os specific key codes, we need to map special
     // key types like tab
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -270,6 +271,7 @@ public:
     io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
     io.KeyMap[ImGuiKey_Space] = VK_SPACE;
     io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
+    */
 #endif
 
     // Window initialization
@@ -878,6 +880,7 @@ public:
           input_flag = 1;
 
       if(close_flag == 1){
+          //OutputDebugString("CLOSE FLAG\n");
           kill_data_source();
           close_flag = 0;
           serialBuf[0] = baudBuf[0] = ipBuf[0] = portBuf[0] = '\0';
@@ -1003,6 +1006,8 @@ public:
   }
 
   void canTableContents(){
+      const char * path = "log";
+      std::ofstream file(path, std::ios::out | std::ios::trunc);
     static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter |
                                    ImGuiTableFlags_BordersV |
                                    ImGuiTableFlags_RowBg |
@@ -1026,8 +1031,10 @@ public:
 
             ImGui::TableSetColumnIndex(2);
             std::string decoded;
-            if (backend_decode(id, frame, decoded))
+            if (backend_decode(id, frame, decoded)){
               ImGui::TextUnformatted(decoded.c_str());
+                file << decoded.c_str() << std::endl;
+            }
             else {
               char buf[3 * 8 + 1] = {0};
               for (uint8_t i = 0; i < frame.len; ++i)
@@ -1038,6 +1045,7 @@ public:
         }
         ImGui::EndTable();
       }
+      file.close();
   }
 
   void CAN_TABLE(){
@@ -1059,7 +1067,7 @@ void modelWindowContents(){
     ImGui::SliderFloat("Scale", &uiSettings.modelScale, 0.1f, 5.0f);
     ImGui::ColorEdit4("Effect", glm::value_ptr(uiSettings.effectColor));
 
-    const char * effects[] = {"None", "Invert", "Grayscale"};
+    const char * effects[] = {"None", "Invert", "Grayscale", "Gradient"};
     ImGui::Combo("Effect Type", &uiSettings.effectType, effects, IM_ARRAYSIZE(effects));
 }
 
@@ -1235,10 +1243,11 @@ void drawMainWindow(){
               ImGui::EndTabItem();
           }
 
+          /*
           if(ImGui::BeginTabItem("model")){
             modelWindowContents();
             ImGui::EndTabItem();
-          }
+          } */
 
           auto loaded = get_loaded_dbcs();
           for(const auto &name : loaded){
